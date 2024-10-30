@@ -6,7 +6,6 @@ const router = express.Router();
 
 const register = async(req,res)=>{
     const { name, email, password } = req.body;
-
   try {
     let user = await User.findOne({ email });
 
@@ -27,8 +26,8 @@ const register = async(req,res)=>{
 
 }
 
-const login = async(req,res)=>{
-    const { email, password } = req.body;
+const login = async (req, res) => {
+  const { email, password } = req.body;
 
   try {
     const user = await User.findOne({ email });
@@ -39,17 +38,35 @@ const login = async(req,res)=>{
 
     if (!isMatch) return res.status(400).json({ msg: 'Invalid credentials' });
 
+    // Create payload with user ID
     const payload = { userId: user.id };
 
+    // Sign and return JWT
     jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' }, (err, token) => {
       if (err) throw err;
-      res.json({ token });
+      res.json({ token }); // Send token to the client
     });
   } catch (error) {
     res.status(500).send('Server Error');
   }
+};
+
+
+const socialAccounts=async(req,res)=>{
+    try {
+        const user = await User.findById(req.user.id);
+    
+        res.json({
+          facebookAccounts: user.facebookAccounts,
+          instagramAccounts: user.instagramAccounts,
+          twitterAccounts: user.twitterAccounts,
+          linkedinAccounts: user.linkedinAccounts,
+        });
+      } catch (error) {
+        res.status(500).json({ error: 'Error fetching connected accounts' });
+      }
 }
 
 // making the full authentication
 // aand making sure fields are the required field required 
-module.exports={register,login}
+module.exports={register,login,socialAccounts}

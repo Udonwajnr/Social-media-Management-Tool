@@ -1,1 +1,8 @@
 eDkrisRhleBLHLYd
+Phase 1: Basic Account Management & Post Scheduling
+User Authentication: Set up user registration and login (possibly with Google or Facebook as an additional option).
+Connect Social Media Accounts: Implement OAuth 2.0 to connect user accounts for Facebook, Instagram, Twitter, and LinkedIn.
+Post Scheduling: Allow users to create and schedule posts for multiple accounts.
+alright we are done with user authentication authentication lets do then next connect socail media accounts 
+
+we are doing for th backend now

@@ -6,7 +6,6 @@ const session = require('express-session'); // Import express-session
 const axios = require("axios")
 let cors = require("cors");
 let cookieParser = require("cookie-parser");
-const { AuthorizationCode  } = require('simple-oauth2');
 const querystring=require("querystring")
 
 const app = express();
@@ -49,6 +48,9 @@ const INSTAGRAM_APP_ID=process.env.INSTAGRAM_APP_ID;
 const INSTAGRAM_APP_SECRET=process.env.INSTAGRAM_APP_SECRET;
 const REDIRECT_URI ="https://social-media-mamangement-6nze.vercel.app/auth/instagram/callback"
 
+const LINKEDIN_CLIENT_ID = process.env.LINKEDIN_CLIENT_ID;
+const LINKEDIN_CLIENT_SECRET = process.env.LINKEDIN_CLIENT_SECRET;
+const LINKEDIN_REDIRECT_URI = process.env.LINKEDIN_REDIRECT_URI; // Update if using production
 
 // Redirect to Facebook OAuth for business page management
 app.get('/auth/facebook/business', (req, res) => {
@@ -175,6 +177,70 @@ app.get('/auth/instagram/callback', async (req, res) => {
       console.error('Error during Instagram authentication:', error.response.data);
       res.status(500).json({ error: 'Instagram authentication failed' });
   }
+});
+
+// LinkIn
+// / Step 1: Redirect to LinkedIn OAuth
+// app.get('/auth/linkedin', (req, res) => {
+//     const authUrl = `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${LINKEDIN_CLIENT_ID}&redirect_uri=${encodeURIComponent(LINKEDIN_REDIRECT_URI)}&scope=r_liteprofile%20r_emailaddress%20w_member_social`;
+//     res.redirect(authUrl);
+// });
+
+app.get('/auth/linkedin', (req, res) => {
+    const redirectUri = encodeURIComponent(process.env.LINKEDIN_REDIRECT_URI); // Update with your redirect URI
+    const clientId = process.env.LINKEDIN_CLIENT_ID;
+    const scope = encodeURIComponent('openid profile w_member_social email'); // Updated scopes
+
+    const authUrl = `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${clientId}&redirect_uri=${redirectUri}&scope=${scope}`;
+    
+    res.redirect(authUrl);
+});
+
+
+// Step 2: Handle Callback and Exchange Code for Access Token
+app.get('/auth/linkedin/callback', async (req, res) => {
+    const { code } = req.query;
+
+    try {
+        // Exchange the code for an access token
+        const tokenResponse = await axios.post('https://www.linkedin.com/oauth/v2/accessToken', null, {
+            params: {
+                grant_type: 'authorization_code',
+                code,
+                redirect_uri: LINKEDIN_REDIRECT_URI,
+                client_id: LINKEDIN_CLIENT_ID,
+                client_secret: LINKEDIN_CLIENT_SECRET,
+            },
+        });
+
+        const accessToken = tokenResponse.data.access_token;
+
+        // Step 3: Use the access token to fetch user's profile data
+        const profileResponse = await axios.get('https://api.linkedin.com/v2/me', {
+            headers: {
+                Authorization: `Bearer ${accessToken}`,
+            },
+        });
+
+        const emailResponse = await axios.get('https://api.linkedin.com/v2/emailAddress?q=members&projection=(elements*(handle~))', {
+            headers: {
+                Authorization: `Bearer ${accessToken}`,
+            },
+        });
+
+        const profileData = profileResponse.data;
+        const emailData = emailResponse.data.elements[0]['handle~'].emailAddress;
+
+        res.json({
+            message: 'LinkedIn Authentication Successful',
+            profileData,
+            email: emailData,
+        });
+
+    } catch (error) {
+        console.error('Error during LinkedIn authentication:', error.response ? error.response.data : error.message);
+        res.status(500).json({ error: 'LinkedIn authentication failed' });
+    }
 });
 
 // Start server
